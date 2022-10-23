@@ -1,9 +1,8 @@
 import { load } from "cheerio";
-import * as axios from "axios";
 import { sleep } from "sleep";
 import { supabase } from "@/app";
 import { ChapterQueueArg } from "./index";
-import { crawlChapterEvent } from "@/helper";
+import { crawlChapterEvent, useAxios } from "@/helper";
 
 export const crawlChapterWorker = async ({
   storyUrl,
@@ -33,12 +32,10 @@ export const crawlChapterWorker = async ({
 export const crawlChapter = async (
   url: string
 ): Promise<[any, Error | null]> => {
-  //@ts-ignore
-  const res = await axios.get(url);
+  const [data, error] = await useAxios(url).get();
+  if (error) return [null, error];
 
-  if (!res.data) return [null, new Error("Link not found!")];
-
-  const $ = load(res.data);
+  const $ = load(data);
 
   const pagination_control = $(".pagination-control")?.[0];
 
@@ -55,9 +52,11 @@ export const crawlChapter = async (
 
     const _url = `${url}${page}`;
     console.log("_url", _url);
-    //@ts-ignore
-    const res = await axios.get(_url);
-    const $2 = load(res.data);
+
+    const [data2, error2] = await useAxios(_url).get();
+    if (error2) return [null, error2];
+
+    const $2 = load(data2);
     const chapter_div = $2("#chapters")?.[0];
     $2(chapter_div)
       .find(".vip-0 a")
@@ -85,10 +84,10 @@ export const crawlChapter = async (
 const crawlDetailChapter = async (url: string) => {
   console.log("Chapter url", url);
 
-  //@ts-ignore
-  const res = await axios.get(url);
+  const [data, error] = await useAxios(url).get();
+  if (error) throw error;
 
-  const $ = load(res.data);
+  const $ = load(data);
   const title = $(".chapter-title")?.text();
   const content = $("#chapter-content")?.text();
   $("#chapter-content")?.find("iframe").remove();
